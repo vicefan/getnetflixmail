@@ -149,7 +149,7 @@ def fetch_emails(user, pw, server, port, mailbox, criteria, limit, only_include_
 def get_config():
     s = st.secrets
     return {
-        "access_key": s.get("ACCESS_KEY", ""),
+        "access_key": s.get("ACCESS_KEY"),
         "user": s.get("ID"),
         "pw": s.get("PW"),
         "server": s.get("SERVER", DEFAULT_SERVER),
