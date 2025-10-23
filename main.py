@@ -9,11 +9,6 @@ from bs4 import BeautifulSoup
 import html as htmllib
 import streamlit as st
 
-# ----- Settings -----
-DEFAULT_SERVER = "imap.naver.com"
-DEFAULT_PORT = 993
-DEFAULT_MAILBOX = "Netflix"  # 필요시 INBOX로 바꾸세요
-
 # ----- Helpers -----
 def decode_mime(s):
     if not s:
@@ -71,22 +66,20 @@ def get_html_body(msg):
                 return payload.decode("utf-8", errors="replace")
     return ""
 
-def extract_links_from_html(html, text_contains=None, href_contains=None):
+def extract_links_from_html(html):
     if not html:
         return []
     soup = BeautifulSoup(html, "html.parser")
     links = []
     for a in soup.find_all("a", href=True):
         text = (a.get_text() or "").strip()
+        if text not in ["네, 본인입니다", "코드 받기"]:
+            continue
         href = htmllib.unescape(a["href"])
-        if text_contains and text_contains not in text:
-            continue
-        if href_contains and href_contains not in href:
-            continue
         links.append((text, href))
     return links
 
-def fetch_emails(user, pw, server, port, mailbox, criteria, limit, only_include_text=None, link_text_filter=None, link_href_filter=None):
+def fetch_emails(user, pw, server, port, mailbox, criteria, limit):
     imap = imaplib.IMAP4_SSL(server, port=port)
     imap.login(user, pw)
     out = []
@@ -120,13 +113,13 @@ def fetch_emails(user, pw, server, port, mailbox, criteria, limit, only_include_
                 dt = None
 
             text = get_text_body(msg).strip().replace("\r", " ").replace("\n", " ")
-            if only_include_text and only_include_text not in text:
+
+            if subject not in ["중요: 넷플릭스 이용 가구를 업데이트하는 방법", "회원님의 넷플릭스 임시 접속 코드"]:
                 continue
 
             html = get_html_body(msg)
-            btn_links = extract_links_from_html(html, text_contains=link_text_filter) if link_text_filter else []
-            nf_links = extract_links_from_html(html, href_contains=link_href_filter) if link_href_filter else []
-            links = btn_links or nf_links
+            btn_links = extract_links_from_html(html)
+            links = btn_links
 
             snippet = text[:200] + ("..." if len(text) > 200 else "")
             out.append({
@@ -152,15 +145,11 @@ def get_config():
         "access_key": s.get("ACCESS_KEY"),
         "user": s.get("ID"),
         "pw": s.get("PW"),
-        "server": s.get("SERVER", DEFAULT_SERVER),
-        "port": int(s.get("PORT", DEFAULT_PORT)),
-        "mailbox": s.get("MAILBOX", DEFAULT_MAILBOX),
+        "server": s.get("SERVER"),
+        "port": int(s.get("PORT")),
+        "mailbox": s.get("MAILBOX"),
         "criteria": s.get("CRITERIA", "ALL"),
         "limit": int(s.get("LIMIT", 20)),
-        "only_include_text": s.get("ONLY_INCLUDE_TEXT") or None,
-        "link_text_filter": s.get("LINK_TEXT_FILTER") or None,
-        "link_href_filter": s.get("LINK_HREF_FILTER") or None,
-        "only_with_links": bool(s.get("ONLY_WITH_LINKS", True)),
     }
 
 # ----- UI -----
@@ -191,9 +180,6 @@ if run:
                     mailbox=cfg["mailbox"],
                     criteria=cfg["criteria"],
                     limit=cfg["limit"],
-                    only_include_text=cfg["only_include_text"],
-                    link_text_filter=cfg["link_text_filter"],
-                    link_href_filter=cfg["link_href_filter"],
                 )
 
             # sort by date desc
@@ -203,8 +189,7 @@ if run:
             rows.sort(key=key_dt, reverse=True)
 
             # optional: only messages with links
-            if cfg["only_with_links"]:
-                rows = [r for r in rows if r.get("links")]
+            rows = [r for r in rows if r.get("links")]
 
             # quick links aggregate
             all_links = []
