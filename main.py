@@ -153,27 +153,15 @@ def get_config():
     }
 
 # ----- UI -----
-st.set_page_config(page_title="Mail Link Finder", layout="wide")
+st.set_page_config(page_title="넷플릭스 인증", layout="wide")
 
-# --- small visual tweaks ---
-st.markdown("""
-<style>
-/* page background, font, and link spacing */
-div.block-container {padding-top: 1rem;}
-.stMarkdown a {color: #8ab4f8;}
-.quick-link {margin-bottom: 0.45rem;}
-.streamlit-expanderHeader {font-weight:600}
-</style>
-""", unsafe_allow_html=True)
-
-st.title("Mail Link Finder (Naver IMAP)")
+st.title("Netflix Verfer")
 
 # Sidebar access form (uses form to avoid accidental submits)
 with st.sidebar.form(key="access_form"):
     st.header("Access")
     access_pw = st.text_input("Access Password", type="password")
-    st.caption("Enter the access password configured in your Streamlit secrets.")
-    submitted = st.form_submit_button("Fetch Links")
+    submitted = st.form_submit_button("Get Links")
     run = submitted
 
 if run:
