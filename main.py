@@ -154,12 +154,27 @@ def get_config():
 
 # ----- UI -----
 st.set_page_config(page_title="Mail Link Finder", layout="wide")
+
+# --- small visual tweaks ---
+st.markdown("""
+<style>
+/* page background, font, and link spacing */
+div.block-container {padding-top: 1rem;}
+.stMarkdown a {color: #8ab4f8;}
+.quick-link {margin-bottom: 0.45rem;}
+.streamlit-expanderHeader {font-weight:600}
+</style>
+""", unsafe_allow_html=True)
+
 st.title("Mail Link Finder (Naver IMAP)")
 
-with st.sidebar:
+# Sidebar access form (uses form to avoid accidental submits)
+with st.sidebar.form(key="access_form"):
     st.header("Access")
     access_pw = st.text_input("Access Password", type="password")
-    run = st.button("Fetch Links")
+    st.caption("Enter the access password configured in your Streamlit secrets.")
+    submitted = st.form_submit_button("Fetch Links")
+    run = submitted
 
 if run:
     cfg = get_config()
@@ -197,36 +212,40 @@ if run:
                 for text, href in r.get("links", []):
                     all_links.append((text or "(no text)", href, r["subject"], r.get("dt")))
 
+            # show counts and split into two columns for a cleaner layout
             st.success(f"Collected {len(all_links)} link(s) from {len(rows)} email(s).")
 
             if not all_links:
                 st.info("No matching links.")
             else:
-                st.subheader("Quick Links")
                 today_local = datetime.now().astimezone().date()
-                for label, href, subj, dt in all_links:
-                    is_today = bool(dt and dt.astimezone().date() == today_local)
-                    star = "⭐ " if is_today else ""
-                    st.markdown(f'- {star}[{label}]({href}) — {subj}')
+                col_left, col_right = st.columns([1, 1])
 
-                # details (optional)
-                st.divider()
-                st.caption("Details")
-                for r in rows:
-                    dt = r.get("dt")
-                    is_today = bool(dt and dt.astimezone().date() == today_local)
-                    header = f'#{r["uid"]} | {r["date"]} | {r["subject"]}'
-                    if is_today:
-                        header = f'⭐ TODAY | {header}'
-                    with st.expander(header, expanded=is_today):
-                        st.text(f'From: {r["from"]}')
-                        st.text(f'Snippet: {r["snippet"]}')
-                        links = r.get("links", [])
-                        if links:
-                            for text, href in links[:20]:
-                                label = text if text else "(no text)"
-                                st.markdown(f'- [{label}]({href})')
-                        else:
-                            st.caption("No matching links.")
+                with col_left:
+                    st.subheader("Quick Links")
+                    for label, href, subj, dt in all_links:
+                        is_today = bool(dt and dt.astimezone().date() == today_local)
+                        star = "⭐ " if is_today else ""
+                        # use a small container per link for tighter spacing
+                        st.markdown(f'<div class="quick-link">- {star}<a href="{href}" target="_blank">{label}</a> — <span style="color:#9aa0a6">{subj}</span></div>', unsafe_allow_html=True)
+
+                with col_right:
+                    st.subheader("Details")
+                    for r in rows:
+                        dt = r.get("dt")
+                        is_today = bool(dt and dt.astimezone().date() == today_local)
+                        header = f'#{r["uid"]} | {r["date"]} | {r["subject"]}'
+                        if is_today:
+                            header = f'⭐ TODAY | {header}'
+                        with st.expander(header, expanded=is_today):
+                            st.markdown(f'**From:** {r["from"]}')
+                            st.markdown(f'**Snippet:** {r["snippet"]}')
+                            links = r.get("links", [])
+                            if links:
+                                for text, href in links[:20]:
+                                    label = text if text else "(no text)"
+                                    st.markdown(f'- [{label}]({href})')
+                            else:
+                                st.caption("No matching links.")
         except Exception as e:
             st.error(f"Error: {e}")
