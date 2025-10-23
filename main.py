@@ -155,7 +155,7 @@ def get_config():
 # ----- UI -----
 st.set_page_config(page_title="넷플릭스 인증", layout="wide")
 
-with open("style.css", "r") as f:
+with open("style.txt", "r") as f:
     css_style = f.read()
 st.markdown(css_style, unsafe_allow_html=True)
 
